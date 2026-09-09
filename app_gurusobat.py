@@ -81,6 +81,68 @@ menu = st.sidebar.radio(
     ["✨ Skeletal Planner (RPP 1-Hal)", "🤝 Gotong Royong Hub", "🌱 Refleksi Mikro Harian"]
 )
 
+jenjang_options = ["SD", "SMP", "SMA", "SMK"]
+kelas_by_jenjang = {
+    "SD": [f"Kelas {kelas} (SD)" for kelas in range(1, 7)],
+    "SMP": [f"Kelas {kelas} (SMP)" for kelas in range(7, 10)],
+    "SMA": [f"Kelas {kelas} (SMA)" for kelas in range(10, 13)],
+    "SMK": [f"Kelas {kelas} (SMK)" for kelas in range(10, 13)],
+}
+subject_options = [
+    "IPA", "Bahasa Indonesia", "Matematika", "IPS", "Bahasa Inggris",
+    "Pendidikan Agama", "PJOK", "Seni Budaya", "Informatika", "Guru Kelas (SD)"
+]
+profile = st.session_state.get("teacher_profile", {})
+
+with st.sidebar.expander("👤 Profil Guru", expanded=not profile):
+    with st.form("teacher_profile_form"):
+        profile_name = st.text_input("Nama panggilan", value=profile.get("name", ""), placeholder="Contoh: Bu Rina")
+        profile_jenjang = st.selectbox(
+            "Jenjang yang diajar",
+            jenjang_options,
+            index=jenjang_options.index(profile.get("jenjang", "SD"))
+            if profile.get("jenjang", "SD") in jenjang_options else 0,
+        )
+        profile_kelas_options = kelas_by_jenjang[profile_jenjang]
+        saved_class = profile.get("kelas", profile_kelas_options[0])
+        profile_kelas = st.selectbox(
+            "Kelas yang diajar",
+            profile_kelas_options,
+            index=profile_kelas_options.index(saved_class)
+            if saved_class in profile_kelas_options else 0,
+        )
+        saved_subjects = [subject for subject in profile.get("subjects", []) if subject in subject_options]
+        profile_subjects = st.multiselect(
+            "Mata pelajaran",
+            subject_options,
+            default=saved_subjects or ["IPA"],
+        )
+        profile_school = st.text_input(
+            "Nama sekolah (opsional)",
+            value=profile.get("school", ""),
+            placeholder="Contoh: SMP Negeri 1 Bandung",
+        )
+        profile_saved = st.form_submit_button("💾 Simpan Profil", use_container_width=True)
+
+    if profile_saved:
+        st.session_state.teacher_profile = {
+            "name": profile_name,
+            "jenjang": profile_jenjang,
+            "kelas": profile_kelas,
+            "subjects": profile_subjects,
+            "school": profile_school,
+        }
+        st.success("Profil tersimpan untuk sesi ini.")
+        profile = st.session_state.teacher_profile
+
+if profile:
+    subject_summary = ", ".join(profile.get("subjects", [])) or "Belum dipilih"
+    school_summary = f" · {profile['school']}" if profile.get("school") else ""
+    st.sidebar.caption(
+        f"**{profile.get('name') or 'GuruSobat'}** · {profile.get('kelas', 'Kelas belum dipilih')} · "
+        f"{subject_summary}{school_summary}"
+    )
+
 st.sidebar.divider()
 st.sidebar.info("💡 **Mode Demo Wawancara**: Tunjukkan antarmuka ini kepada 3-5 guru target untuk menguji alur kerja mereka.")
 
@@ -94,8 +156,20 @@ if menu == "✨ Skeletal Planner (RPP 1-Hal)":
     with st.form("planner_form"):
         col1, col2 = st.columns(2)
         with col1:
-            mapel = st.selectbox("Mata Pelajaran", ["IPA", "Bahasa Indonesia", "Matematika", "IPS", "Bahasa Inggris", "Guru Kelas (SD)"])
-            kelas = st.selectbox("Kelas / Jenjang", ["Kelas 4 (SD)", "Kelas 7 (SMP)", "Kelas 10 (SMA)"])
+            planner_subjects = profile.get("subjects", []) or ["IPA"]
+            mapel = st.selectbox(
+                "Mata Pelajaran",
+                subject_options,
+                index=subject_options.index(planner_subjects[0]),
+            )
+            planner_jenjang = profile.get("jenjang", "SD")
+            planner_classes = kelas_by_jenjang[planner_jenjang]
+            planner_class = profile.get("kelas", planner_classes[0])
+            kelas = st.selectbox(
+                "Kelas / Jenjang",
+                planner_classes,
+                index=planner_classes.index(planner_class) if planner_class in planner_classes else 0,
+            )
         with col2:
             topik = st.text_input("Topik Materi", value="Ekosistem & Pemanasan Global")
             durasi = st.selectbox("Alokasi Waktu", ["2 x 45 Menit", "3 x 40 Menit", "2 x 35 Menit"])
