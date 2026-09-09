@@ -174,12 +174,15 @@ BALOK_CLOSING = [
 ]
 
 # Initialize Session States for Active Blocks
-if "sel_op" not in st.session_state:
-    st.session_state.sel_op = BALOK_OPENING
-if "sel_in" not in st.session_state:
-    st.session_state.sel_in = BALOK_INTI
-if "sel_cl" not in st.session_state:
-    st.session_state.sel_cl = BALOK_CLOSING
+def ensure_selected_block(state_key, blocks):
+    selected_block = st.session_state.get(state_key)
+    if not isinstance(selected_block, dict) or "id" not in selected_block:
+        st.session_state[state_key] = blocks[0]
+
+
+ensure_selected_block("sel_op", BALOK_OPENING)
+ensure_selected_block("sel_in", BALOK_INTI)
+ensure_selected_block("sel_cl", BALOK_CLOSING)
 
 # ---------------------------------------------------------
 # FITUR 1: VISUAL BLOCK PLANNER (BONGKAR-PASANG INTERAKTIF)
@@ -193,9 +196,9 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
     p_col1, p_col2, p_col3 = st.columns(3)
     with p_col1:
         if st.button("🎯 Resep Evaluasi Kilat", use_container_width=True):
-            st.session_state.sel_op = BALOK_OPENING
-            st.session_state.sel_in = BALOK_INTI
-            st.session_state.sel_cl = BALOK_CLOSING
+            st.session_state.sel_op = BALOK_OPENING[0]
+            st.session_state.sel_in = BALOK_INTI[0]
+            st.session_state.sel_cl = BALOK_CLOSING[0]
             st.toast("Resep 'Evaluasi Kilat' diterapkan!")
     with p_col2:
         if st.button("🗣️ Resep Kelas Diskusi Seru", use_container_width=True):
