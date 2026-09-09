@@ -144,7 +144,6 @@ if profile:
     )
 
 st.sidebar.divider()
-st.sidebar.info("💡 **Mode Demo Wawancara**: Tunjukkan antarmuka ini kepada 3-5 guru target untuk menguji alur kerja mereka.")
 
 # ---------------------------------------------------------
 # FITUR 1: SKELETAL PLANNER
