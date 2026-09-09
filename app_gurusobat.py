@@ -1,6 +1,10 @@
 import streamlit as st
 import json
 import datetime
+import textwrap
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
 
 # Page Config
 st.set_page_config(
@@ -222,11 +226,42 @@ if menu == "✨ Skeletal Planner (RPP 1-Hal)":
             <small><i>Format terstandar 1-halaman siap cetak / disimpan tanpa narasi berbelit-belit.</i></small>
         </div>
         """, unsafe_allow_html=True)
+
+        pdf_buffer = BytesIO()
+        pdf = canvas.Canvas(pdf_buffer, pagesize=A4)
+        page_width, page_height = A4
+        cursor_y = page_height - 50
+
+        pdf.setFont("Helvetica-Bold", 16)
+        pdf.drawString(50, cursor_y, "RPP 1-HALAMAN GURUSOBAT")
+        cursor_y -= 30
+        pdf.setFont("Helvetica", 10)
+        pdf_lines = [
+            f"Mata Pelajaran: {mapel}",
+            f"Topik: {topik}",
+            f"Kelas: {kelas}",
+            f"Alokasi Waktu: {durasi}",
+            "",
+            f"1. Pembukaan (Apersepsi): {apersepsi}",
+            f"2. Kegiatan Inti: {inti}",
+            f"3. Penutup & Asesmen: {penutup}",
+        ]
+        for line in pdf_lines:
+            for wrapped_line in textwrap.wrap(line, width=92) or [""]:
+                if cursor_y < 50:
+                    pdf.showPage()
+                    pdf.setFont("Helvetica", 10)
+                    cursor_y = page_height - 50
+                pdf.drawString(50, cursor_y, wrapped_line)
+                cursor_y -= 16
+        pdf.save()
+        pdf_buffer.seek(0)
+
         st.download_button(
-            label="📥 Unduh RPP 1-Halaman (.txt)",
-            data=f"RPP 1-HALAMAN GURUSOBAT\nMapel: {mapel}\nTopik: {topik}\nKelas: {kelas}\n\n1. Buka: {apersepsi}\n2. Inti: {inti}\n3. Penutup: {penutup}",
-            file_name=f"RPP_{topik}.txt",
-            mime="text/plain"
+            label="📥 Unduh RPP 1-Halaman (.pdf)",
+            data=pdf_buffer,
+            file_name=f"RPP_{topik}.pdf",
+            mime="application/pdf"
         )
 
 # ---------------------------------------------------------
