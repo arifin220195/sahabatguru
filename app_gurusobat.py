@@ -305,23 +305,18 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
     in_sel = st.session_state.sel_in
     cl_sel = st.session_state.sel_cl
 
-    st.markdown(textwrap.dedent(f"""
-    <div class='preview-box'>
-        <h3 style='margin-top:0; color:#0F172A;'>📄 RPP 1-HALAMAN: {mapel} - {topik} ({kelas})</h3>
-        <p style='color:#475569;'><b>Estimasi Total Waktu:</b> 45-60 Menit | <b>Format:</b> Modular Ringkas</p>
-        <hr style='border-top: 1px solid #CBD5E1;'>
-        <p><b>1. PEMBUKAAN ({op_sel['time']}):</b> {op_sel['icon']} <b>{op_sel['name']}</b><br>
-        <span style='color:#64748B; font-size:0.9rem;'>{op_sel['desc']}</span></p>
-
-        <p><b>2. KEGIATAN INTI ({in_sel['time']}):</b> {in_sel['icon']} <b>{in_sel['name']}</b><br>
-        <span style='color:#64748B; font-size:0.9rem;'>{in_sel['desc']}</span></p>
-
-        <p><b>3. PENUTUP & ASESMEN ({cl_sel['time']}):</b> {cl_sel['icon']} <b>{cl_sel['name']}</b><br>
-        <span style='color:#64748B; font-size:0.9rem;'>{cl_sel['desc']}</span></p>
-        <hr style='border-top: 1px solid #CBD5E1;'>
-        <small style='color:#059669;'><b>✓ Siap Mengajar:</b> Rangka ini siap langsung dipakai mengajar tanpa narasi administratif berbelit-belit.</small>
-    </div>
-    """), unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(f"### 📄 RPP 1-HALAMAN: {mapel} - {topik} ({kelas})")
+        st.caption("Estimasi Total Waktu: 45-60 Menit | Format: Modular Ringkas")
+        st.divider()
+        st.markdown(f"**1. PEMBUKAAN ({op_sel['time']}):** {op_sel['icon']} **{op_sel['name']}**")
+        st.caption(op_sel["desc"])
+        st.markdown(f"**2. KEGIATAN INTI ({in_sel['time']}):** {in_sel['icon']} **{in_sel['name']}**")
+        st.caption(in_sel["desc"])
+        st.markdown(f"**3. PENUTUP & ASESMEN ({cl_sel['time']}):** {cl_sel['icon']} **{cl_sel['name']}**")
+        st.caption(cl_sel["desc"])
+        st.divider()
+        st.success("Siap Mengajar: Rangka ini siap langsung dipakai mengajar tanpa narasi administratif berbelit-belit.")
 
     rpp_text = f"""==================================================
 RPP 1-HALAMAN GURUSOBAT (BONGKAR-PASANG)
