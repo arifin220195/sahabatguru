@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import datetime
+import textwrap
 
 # Page Config
 st.set_page_config(
@@ -236,7 +237,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
             border_color = "2.5px solid #2563EB" if is_selected else "1px solid #E5E7EB"
             bg_color = "#EFF6FF" if is_selected else "#FFFFFF"
 
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
             <div style="border:{border_color}; background-color:{bg_color}; padding:0.8rem; border-radius:10px; height:170px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
                     <span style="font-size:1.3rem;">{item['icon']}</span>
@@ -245,7 +246,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
                 <div style="font-weight:700; font-size:0.9rem; color:#1E293B;">{item['name']}</div>
                 <div style="font-size:0.75rem; color:#64748B; margin-top:0.3rem;">{item['desc']}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
             if st.button(f"{'✅ Terpasang' if is_selected else '➕ Pasang Balok'}", key=f"btn_op_{item['id']}", use_container_width=True):
                 st.session_state.sel_op = item
                 st.rerun()
@@ -259,7 +260,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
             border_color = "2.5px solid #2563EB" if is_selected else "1px solid #E5E7EB"
             bg_color = "#EFF6FF" if is_selected else "#FFFFFF"
 
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
             <div style="border:{border_color}; background-color:{bg_color}; padding:0.8rem; border-radius:10px; height:170px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
                     <span style="font-size:1.3rem;">{item['icon']}</span>
@@ -268,7 +269,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
                 <div style="font-weight:700; font-size:0.9rem; color:#1E293B;">{item['name']}</div>
                 <div style="font-size:0.75rem; color:#64748B; margin-top:0.3rem;">{item['desc']}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
             if st.button(f"{'✅ Terpasang' if is_selected else '➕ Pasang Balok'}", key=f"btn_in_{item['id']}", use_container_width=True):
                 st.session_state.sel_in = item
                 st.rerun()
@@ -282,7 +283,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
             border_color = "2.5px solid #2563EB" if is_selected else "1px solid #E5E7EB"
             bg_color = "#EFF6FF" if is_selected else "#FFFFFF"
 
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
             <div style="border:{border_color}; background-color:{bg_color}; padding:0.8rem; border-radius:10px; height:170px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
                     <span style="font-size:1.3rem;">{item['icon']}</span>
@@ -291,7 +292,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
                 <div style="font-weight:700; font-size:0.9rem; color:#1E293B;">{item['name']}</div>
                 <div style="font-size:0.75rem; color:#64748B; margin-top:0.3rem;">{item['desc']}</div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
             if st.button(f"{'✅ Terpasang' if is_selected else '➕ Pasang Balok'}", key=f"btn_cl_{item['id']}", use_container_width=True):
                 st.session_state.sel_cl = item
                 st.rerun()
@@ -304,7 +305,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
     in_sel = st.session_state.sel_in
     cl_sel = st.session_state.sel_cl
 
-    st.markdown(f"""
+    st.markdown(textwrap.dedent(f"""
     <div class='preview-box'>
         <h3 style='margin-top:0; color:#0F172A;'>📄 RPP 1-HALAMAN: {mapel} - {topik} ({kelas})</h3>
         <p style='color:#475569;'><b>Estimasi Total Waktu:</b> 45-60 Menit | <b>Format:</b> Modular Ringkas</p>
@@ -320,7 +321,7 @@ if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
         <hr style='border-top: 1px solid #CBD5E1;'>
         <small style='color:#059669;'><b>✓ Siap Mengajar:</b> Rangka ini siap langsung dipakai mengajar tanpa narasi administratif berbelit-belit.</small>
     </div>
-    """, unsafe_allow_html=True)
+    """), unsafe_allow_html=True)
 
     rpp_text = f"""==================================================
 RPP 1-HALAMAN GURUSOBAT (BONGKAR-PASANG)
@@ -393,7 +394,7 @@ elif menu == "🤝 Gotong Royong Hub":
         ]
 
         for r in resources:
-            st.markdown(f"""
+            st.markdown(textwrap.dedent(f"""
             <div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:1.2rem; border-radius:10px; margin-bottom:1rem;'>
                 <span class='badge-type'>{r['tag']}</span>
                 <h4 style='margin-top:0.5rem; margin-bottom:0.2rem;'>{r['title']}</h4>
@@ -401,7 +402,7 @@ elif menu == "🤝 Gotong Royong Hub":
                 <p style='font-size:0.95rem;'>{r['desc']}</p>
                 <p style='font-size:0.85rem; color:#1D4ED8;'>❤️ {r['likes']} Menyukai | 🔄 {r['remix']} Guru Telah Menyalin (Remix)</p>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
             if st.button(f"📥 Remix / Gunakan '{r['title']}'", key=r['title']):
                 st.success(f"Materi '{r['title']}' berhasil disalin ke koleksi pribadi Anda!")
 
