@@ -1,20 +1,16 @@
 import streamlit as st
 import json
 import datetime
-import textwrap
-from io import BytesIO
-from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 
 # Page Config
 st.set_page_config(
-    page_title="GuruSobat MVP Prototype",
+    page_title="GuruSobat - Visual Block Planner",
     page_icon="📚",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# Custom Styling for Warm & Clean Educator Vibe
+# Custom Styling for Interactive Blocks / Visual Cards
 st.markdown("""
 <style>
     .main-header {
@@ -30,47 +26,28 @@ st.markdown("""
         text-align: center;
         margin-bottom: 1.5rem;
     }
-    .card {
-        background-color: #F3F4F6;
-        padding: 1.2rem;
-        border-radius: 10px;
-        margin-bottom: 1rem;
-        border-left: 5px solid #3B82F6;
+    .badge-time {
+        background-color: #FEF3C7;
+        color: #92400E;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
     }
-    .tag {
+    .badge-type {
         background-color: #DBEAFE;
         color: #1E40AF;
         padding: 3px 8px;
-        border-radius: 5px;
-        font-size: 0.8rem;
-        font-weight: 600;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
     }
-    .card h3, .card h4, .card p, .card small {
-        overflow-wrap: anywhere;
-        word-break: break-word;
-    }
-    @media (max-width: 700px) {
-        [data-testid="stAppViewContainer"] .main .block-container {
-            padding: 1rem 0.75rem 3rem;
-        }
-        .main-header {
-            font-size: 1.35rem;
-            line-height: 1.25;
-        }
-        .sub-header {
-            font-size: 0.9rem;
-            line-height: 1.4;
-            margin-bottom: 1rem;
-        }
-        .card {
-            padding: 0.9rem;
-        }
-        [data-testid="stMarkdownContainer"] p,
-        [data-testid="stMarkdownContainer"] h3,
-        [data-testid="stMarkdownContainer"] h4 {
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
+    .preview-box {
+        background-color: #F8FAFC;
+        border-left: 6px solid #10B981;
+        padding: 1.2rem;
+        border-radius: 10px;
+        margin-top: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -78,279 +55,309 @@ st.markdown("""
 # Sidebar Navigation
 st.sidebar.image("https://img.icons8.com/illustrations/100/teacher.png", width=80)
 st.sidebar.title("GuruSobat 📚")
-st.sidebar.caption("Teman Setia & Produktivitas Guru")
+st.sidebar.caption("Teman Personal & Gotong Royong Guru")
 
 menu = st.sidebar.radio(
     "Navigasi Fitur:",
-    [
-        "✨ Skeletal Planner (RPP 1-Hal)",
-        "📝 Bank Komentar & Rubrik",
-        "🤝 Gotong Royong Hub",
-        "🌱 Refleksi Mikro Harian",
-    ]
+    ["🧩 Visual Block Planner (Bongkar-Pasang)", "🤝 Gotong Royong Hub", "🌱 Refleksi Mikro Harian"]
 )
 
-jenjang_options = ["SD", "SMP", "SMA", "SMK"]
-kelas_by_jenjang = {
-    "SD": [f"Kelas {kelas} (SD)" for kelas in range(1, 7)],
-    "SMP": [f"Kelas {kelas} (SMP)" for kelas in range(7, 10)],
-    "SMA": [f"Kelas {kelas} (SMA)" for kelas in range(10, 13)],
-    "SMK": [f"Kelas {kelas} (SMK)" for kelas in range(10, 13)],
-}
-subject_options = [
-    "IPA", "Bahasa Indonesia", "Matematika", "IPS", "Bahasa Inggris",
-    "Pendidikan Agama", "PJOK", "Seni Budaya", "Informatika", "Guru Kelas (SD)"
+st.sidebar.divider()
+st.sidebar.info("💡 **Mode Demo Wawancara**: Ketuk balok-balok kegiatan di bawah untuk mempraktikkan bongkar-pasang RPP 1-Halaman secara visual!")
+
+# ---------------------------------------------------------
+# DATA BALOK RUBIK / KOMPONEN PEMBELAJARAN
+# ---------------------------------------------------------
+BALOK_OPENING = [
+    {
+        "id": "op_1",
+        "icon": "⚡",
+        "name": "Kuis Retrieval 3 Soal",
+        "time": "5 Menit",
+        "tag": "Individu / Otomatis",
+        "desc": "Menguji ingatan materi pertemuan lalu dengan 3 pertanyaan singkat di awal kelas."
+    },
+    {
+        "id": "op_2",
+        "icon": "🎬",
+        "name": "Video & Pertanyaan Pemantik",
+        "time": "7 Menit",
+        "tag": "Diskusi Kelas",
+        "desc": "Menayangkan klip pendek 2 menit lalu mengajukan 1 pertanyaan pemancing rasa ingin tahu."
+    },
+    {
+        "id": "op_3",
+        "icon": "📸",
+        "name": "Diskusi Gambar Momen Nyata",
+        "time": "5 Menit",
+        "tag": "Visual",
+        "desc": "Menampilkan foto/isu terkini yang berkaitan erat dengan kehidupan sehari-hari siswa."
+    },
+    {
+        "id": "op_4",
+        "icon": "💡",
+        "name": "Curah Pendapat Papan Tulis",
+        "time": "10 Menit",
+        "tag": "Interaktif",
+        "desc": "Siswa menuliskan 1 kata yang mereka tahu tentang topik hari ini di papan tulis."
+    }
 ]
-profile = st.session_state.get("teacher_profile", {})
-st.session_state.setdefault("comment_bank", [])
-st.session_state.setdefault("published_resources", [])
-st.session_state.setdefault("remixed_resources", [])
-st.session_state.setdefault("reflection_history", [])
-st.session_state.setdefault("affirmations", [])
 
-with st.sidebar.expander("👤 Profil Guru", expanded=not profile):
-    with st.form("teacher_profile_form"):
-        profile_name = st.text_input("Nama panggilan", value=profile.get("name", ""), placeholder="Contoh: Bu Rina")
-        profile_jenjang = st.selectbox(
-            "Jenjang yang diajar",
-            jenjang_options,
-            index=jenjang_options.index(profile.get("jenjang", "SD"))
-            if profile.get("jenjang", "SD") in jenjang_options else 0,
-        )
-        profile_kelas_options = kelas_by_jenjang[profile_jenjang]
-        saved_class = profile.get("kelas", profile_kelas_options[0])
-        profile_kelas = st.selectbox(
-            "Kelas yang diajar",
-            profile_kelas_options,
-            index=profile_kelas_options.index(saved_class)
-            if saved_class in profile_kelas_options else 0,
-        )
-        saved_subjects = [subject for subject in profile.get("subjects", []) if subject in subject_options]
-        profile_subjects = st.multiselect(
-            "Mata pelajaran",
-            subject_options,
-            default=saved_subjects or ["IPA"],
-        )
-        profile_school = st.text_input(
-            "Nama sekolah (opsional)",
-            value=profile.get("school", ""),
-            placeholder="Contoh: SMP Negeri 1 Bandung",
-        )
-        profile_saved = st.form_submit_button("💾 Simpan Profil", use_container_width=True)
+BALOK_INTI = [
+    {
+        "id": "in_1",
+        "icon": "👥",
+        "name": "Diskusi Kelompok + Lembar Kerja",
+        "time": "30 Menit",
+        "tag": "Kolaboratif",
+        "desc": "Siswa dibagi menjadi kelompok 4 orang untuk menyelesaikan studi kasus di lembar kerja ringkas."
+    },
+    {
+        "id": "in_2",
+        "icon": "🧪",
+        "name": "Praktik / Eksperimen Berpasangan",
+        "time": "35 Menit",
+        "tag": "Praktik Langsung",
+        "desc": "Siswa mencoba simulasi/alat peraga sederhana berdua untuk membuktikan konsep materi."
+    },
+    {
+        "id": "in_3",
+        "icon": "🎤",
+        "name": "Studi Kasus & Presentasi Kilat 2 Menit",
+        "time": "30 Menit",
+        "tag": "Public Speaking",
+        "desc": "Setiap kelompok menganalisis masalah nyata dan menyajikan solusinya dalam 2 menit."
+    },
+    {
+        "id": "in_4",
+        "icon": "🧩",
+        "name": "Jigsaw / Kelompok Ahli",
+        "time": "40 Menit",
+        "tag": "Tipe Koperatif",
+        "desc": "Siswa mendalami 1 sub-topik spesifik di kelompok ahli lalu mengajarkannya ke kelompok asal."
+    }
+]
 
-    if profile_saved:
-        st.session_state.teacher_profile = {
-            "name": profile_name,
-            "jenjang": profile_jenjang,
-            "kelas": profile_kelas,
-            "subjects": profile_subjects,
-            "school": profile_school,
-        }
-        st.success("Profil tersimpan untuk sesi ini.")
-        profile = st.session_state.teacher_profile
+BALOK_CLOSING = [
+    {
+        "id": "cl_1",
+        "icon": "🎟️",
+        "name": "Exit Ticket 1 Pertanyaan",
+        "time": "5 Menit",
+        "tag": "Evaluasi Cepat",
+        "desc": "Siswa menuliskan 1 jawaban pemahaman di secarik kertas sebelum keluar kelas."
+    },
+    {
+        "id": "cl_2",
+        "icon": "💬",
+        "name": "Refleksi 1 Kata Kunci",
+        "time": "5 Menit",
+        "tag": "Reflektif",
+        "desc": "Setiap siswa bergantian menyebutkan 1 kata yang paling menggambarkan apa yang mereka pelajari."
+    },
+    {
+        "id": "cl_3",
+        "icon": "📢",
+        "name": "Whole-Class Feedback (Umpan Balik Kelas)",
+        "time": "10 Menit",
+        "tag": "Evaluasi Bersama",
+        "desc": "Guru merangkum 3 poin pemahaman terbaik dan 2 kekeliruan umum siswa hari itu."
+    },
+    {
+        "id": "cl_4",
+        "icon": "📲",
+        "name": "Kuis Otomatis 5 Soal",
+        "time": "8 Menit",
+        "tag": "Formatif / Digital",
+        "desc": "Kuis singkat seru di HP/kertas yang langsung dinilai tanpa perlu mengoreksi manual."
+    }
+]
 
-if profile:
-    subject_summary = ", ".join(profile.get("subjects", [])) or "Belum dipilih"
-    school_summary = f" · {profile['school']}" if profile.get("school") else ""
-    st.sidebar.caption(
-        f"**{profile.get('name') or 'GuruSobat'}** · {profile.get('kelas', 'Kelas belum dipilih')} · "
-        f"{subject_summary}{school_summary}"
+# Initialize Session States for Active Blocks
+if "sel_op" not in st.session_state:
+    st.session_state.sel_op = BALOK_OPENING
+if "sel_in" not in st.session_state:
+    st.session_state.sel_in = BALOK_INTI
+if "sel_cl" not in st.session_state:
+    st.session_state.sel_cl = BALOK_CLOSING
+
+# ---------------------------------------------------------
+# FITUR 1: VISUAL BLOCK PLANNER (BONGKAR-PASANG INTERAKTIF)
+# ---------------------------------------------------------
+if menu == "🧩 Visual Block Planner (Bongkar-Pasang)":
+    st.markdown("<div class='main-header'>🧩 Visual Block Planner (RPP Bongkar-Pasang)</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-header'>Pilih dan pasang balok-balok kegiatan di bawah untuk menyusun RPP 1-Halaman secara instan!</div>", unsafe_allow_html=True)
+
+    # Informational Recipe Presets
+    st.markdown("#### ⚡ Pilih Resep Cepat Pembelajaran (Opsional):")
+    p_col1, p_col2, p_col3 = st.columns(3)
+    with p_col1:
+        if st.button("🎯 Resep Evaluasi Kilat", use_container_width=True):
+            st.session_state.sel_op = BALOK_OPENING
+            st.session_state.sel_in = BALOK_INTI
+            st.session_state.sel_cl = BALOK_CLOSING
+            st.toast("Resep 'Evaluasi Kilat' diterapkan!")
+    with p_col2:
+        if st.button("🗣️ Resep Kelas Diskusi Seru", use_container_width=True):
+            st.session_state.sel_op = BALOK_OPENING[1]
+            st.session_state.sel_in = BALOK_INTI[2]
+            st.session_state.sel_cl = BALOK_CLOSING[1]
+            st.toast("Resep 'Kelas Diskusi Seru' diterapkan!")
+    with p_col3:
+        if st.button("🧪 Resep Praktik & Eksperimen", use_container_width=True):
+            st.session_state.sel_op = BALOK_OPENING[2]
+            st.session_state.sel_in = BALOK_INTI[1]
+            st.session_state.sel_cl = BALOK_CLOSING[3]
+            st.toast("Resep 'Praktik & Eksperimen' diterapkan!")
+
+    st.divider()
+
+    # Form metadata
+    col_meta1, col_meta2, col_meta3 = st.columns(3)
+    with col_meta1:
+        mapel = st.selectbox("Mata Pelajaran", ["IPA", "Bahasa Indonesia", "Matematika", "IPS", "Bahasa Inggris", "Guru Kelas (SD)"])
+    with col_meta2:
+        kelas = st.selectbox("Kelas / Jenjang", ["Kelas 4 (SD)", "Kelas 7 (SMP)", "Kelas 10 (SMA)"])
+    with col_meta3:
+        topik = st.text_input("Topik Pembelajaran", value="Ekosistem & Pemanasan Global")
+
+    st.markdown("---")
+    st.subheader("🎨 Papan Bongkar-Pasang Balok Kegiatan")
+
+    # SLOT 1: PEMBUKAAN
+    st.markdown("##### 📍 Slot 1: Balok Pembukaan / Apersepsi")
+    cols_op = st.columns(4)
+    for idx, item in enumerate(BALOK_OPENING):
+        with cols_op[idx]:
+            is_selected = (st.session_state.sel_op["id"] == item["id"])
+            border_color = "2.5px solid #2563EB" if is_selected else "1px solid #E5E7EB"
+            bg_color = "#EFF6FF" if is_selected else "#FFFFFF"
+
+            st.markdown(f"""
+            <div style="border:{border_color}; background-color:{bg_color}; padding:0.8rem; border-radius:10px; height:170px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                    <span style="font-size:1.3rem;">{item['icon']}</span>
+                    <span class="badge-time">{item['time']}</span>
+                </div>
+                <div style="font-weight:700; font-size:0.9rem; color:#1E293B;">{item['name']}</div>
+                <div style="font-size:0.75rem; color:#64748B; margin-top:0.3rem;">{item['desc']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button(f"{'✅ Terpasang' if is_selected else '➕ Pasang Balok'}", key=f"btn_op_{item['id']}", use_container_width=True):
+                st.session_state.sel_op = item
+                st.rerun()
+
+    # SLOT 2: INTI
+    st.markdown("##### 📍 Slot 2: Balok Kegiatan Inti")
+    cols_in = st.columns(4)
+    for idx, item in enumerate(BALOK_INTI):
+        with cols_in[idx]:
+            is_selected = (st.session_state.sel_in["id"] == item["id"])
+            border_color = "2.5px solid #2563EB" if is_selected else "1px solid #E5E7EB"
+            bg_color = "#EFF6FF" if is_selected else "#FFFFFF"
+
+            st.markdown(f"""
+            <div style="border:{border_color}; background-color:{bg_color}; padding:0.8rem; border-radius:10px; height:170px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                    <span style="font-size:1.3rem;">{item['icon']}</span>
+                    <span class="badge-time">{item['time']}</span>
+                </div>
+                <div style="font-weight:700; font-size:0.9rem; color:#1E293B;">{item['name']}</div>
+                <div style="font-size:0.75rem; color:#64748B; margin-top:0.3rem;">{item['desc']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button(f"{'✅ Terpasang' if is_selected else '➕ Pasang Balok'}", key=f"btn_in_{item['id']}", use_container_width=True):
+                st.session_state.sel_in = item
+                st.rerun()
+
+    # SLOT 3: PENUTUP
+    st.markdown("##### 📍 Slot 3: Balok Penutup & Evaluasi")
+    cols_cl = st.columns(4)
+    for idx, item in enumerate(BALOK_CLOSING):
+        with cols_cl[idx]:
+            is_selected = (st.session_state.sel_cl["id"] == item["id"])
+            border_color = "2.5px solid #2563EB" if is_selected else "1px solid #E5E7EB"
+            bg_color = "#EFF6FF" if is_selected else "#FFFFFF"
+
+            st.markdown(f"""
+            <div style="border:{border_color}; background-color:{bg_color}; padding:0.8rem; border-radius:10px; height:170px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                    <span style="font-size:1.3rem;">{item['icon']}</span>
+                    <span class="badge-time">{item['time']}</span>
+                </div>
+                <div style="font-weight:700; font-size:0.9rem; color:#1E293B;">{item['name']}</div>
+                <div style="font-size:0.75rem; color:#64748B; margin-top:0.3rem;">{item['desc']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            if st.button(f"{'✅ Terpasang' if is_selected else '➕ Pasang Balok'}", key=f"btn_cl_{item['id']}", use_container_width=True):
+                st.session_state.sel_cl = item
+                st.rerun()
+
+    # LIVE PREVIEW OF ASSEMBLED RPP
+    st.markdown("---")
+    st.subheader("📄 Hasil Rangka Pembelajaran (Live Preview)")
+
+    op_sel = st.session_state.sel_op
+    in_sel = st.session_state.sel_in
+    cl_sel = st.session_state.sel_cl
+
+    st.markdown(f"""
+    <div class='preview-box'>
+        <h3 style='margin-top:0; color:#0F172A;'>📄 RPP 1-HALAMAN: {mapel} - {topik} ({kelas})</h3>
+        <p style='color:#475569;'><b>Estimasi Total Waktu:</b> 45-60 Menit | <b>Format:</b> Modular Ringkas</p>
+        <hr style='border-top: 1px solid #CBD5E1;'>
+        <p><b>1. PEMBUKAAN ({op_sel['time']}):</b> {op_sel['icon']} <b>{op_sel['name']}</b><br>
+        <span style='color:#64748B; font-size:0.9rem;'>{op_sel['desc']}</span></p>
+
+        <p><b>2. KEGIATAN INTI ({in_sel['time']}):</b> {in_sel['icon']} <b>{in_sel['name']}</b><br>
+        <span style='color:#64748B; font-size:0.9rem;'>{in_sel['desc']}</span></p>
+
+        <p><b>3. PENUTUP & ASESMEN ({cl_sel['time']}):</b> {cl_sel['icon']} <b>{cl_sel['name']}</b><br>
+        <span style='color:#64748B; font-size:0.9rem;'>{cl_sel['desc']}</span></p>
+        <hr style='border-top: 1px solid #CBD5E1;'>
+        <small style='color:#059669;'><b>✓ Siap Mengajar:</b> Rangka ini siap langsung dipakai mengajar tanpa narasi administratif berbelit-belit.</small>
+    </div>
+    """, unsafe_allow_html=True)
+
+    rpp_text = f"""==================================================
+RPP 1-HALAMAN GURUSOBAT (BONGKAR-PASANG)
+==================================================
+Mata Pelajaran : {mapel}
+Kelas / Jenjang : {kelas}
+Topik          : {topik}
+Tanggal        : {datetime.date.today().strftime('%d %B %Y')}
+
+1. PEMBUKAAN ({op_sel['time']}):
+   {op_sel['icon']} {op_sel['name']}
+   Detail: {op_sel['desc']}
+
+2. KEGIATAN INTI ({in_sel['time']}):
+   {in_sel['icon']} {in_sel['name']}
+   Detail: {in_sel['desc']}
+
+3. PENUTUP & EVALUASI ({cl_sel['time']}):
+   {cl_sel['icon']} {cl_sel['name']}
+   Detail: {cl_sel['desc']}
+
+==================================================
+Dibuat dengan GuruSobat - Teman Personal & Gotong Royong Guru
+"""
+
+    st.download_button(
+        label="📥 Unduh RPP 1-Halaman (.txt)",
+        data=rpp_text,
+        file_name=f"RPP_BongkarPasang_{topik.replace(' ', '_')}.txt",
+        mime="text/plain"
     )
 
-st.sidebar.divider()
-
 # ---------------------------------------------------------
-# FITUR 1: SKELETAL PLANNER
-# ---------------------------------------------------------
-if menu == "✨ Skeletal Planner (RPP 1-Hal)":
-    st.markdown("<div class='main-header'>✨ Skeletal Planner</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-header'>Buat draf rangka pembelajaran 1-halaman dalam kurun waktu kurang dari 3 menit!</div>", unsafe_allow_html=True)
-
-    with st.form("planner_form"):
-        col1, col2 = st.columns(2)
-        with col1:
-            planner_subjects = profile.get("subjects", []) or ["IPA"]
-            mapel = st.selectbox(
-                "Mata Pelajaran",
-                subject_options,
-                index=subject_options.index(planner_subjects[0]),
-            )
-            planner_jenjang = profile.get("jenjang", "SD")
-            planner_classes = kelas_by_jenjang[planner_jenjang]
-            planner_class = profile.get("kelas", planner_classes[0])
-            kelas = st.selectbox(
-                "Kelas / Jenjang",
-                planner_classes,
-                index=planner_classes.index(planner_class) if planner_class in planner_classes else 0,
-            )
-        with col2:
-            topik = st.text_input("Topik Materi", value="Ekosistem & Pemanasan Global")
-            durasi = st.selectbox("Alokasi Waktu", ["2 x 45 Menit", "3 x 40 Menit", "2 x 35 Menit"])
-
-        st.markdown("---")
-        st.subheader("🧩 Bongkar-Pasang Komponen Pembelajaran")
-
-        apersepsi = st.selectbox(
-            "1. Pembukaan / Apersepsi (5-10 Menit)",
-            [
-                "Kuis Singkat Retrieval (3 Soal ingatan materi lalu)",
-                "Pematik Video Singkat & Pertanyaan Pemantik",
-                "Diskusi Gambar Momen Nyata",
-                "Brainstorming Curah Pendapat Papan Tulis"
-            ]
-        )
-
-        inti = st.selectbox(
-            "2. Kegiatan Inti (30-40 Menit)",
-            [
-                "Diskusi Kelompok Kecil + Lembar Kerja Singkat",
-                "Praktik / Eksperimen Sederhana Berpasangan",
-                "Studi Kasus & Presentasi Kilat 2 Menit",
-                "Jigsaw / Kelompok Ahli"
-            ]
-        )
-
-        penutup = st.selectbox(
-            "3. Penutup & Evaluasi (10 Menit)",
-            [
-                "Exit Ticket (1 Pertanyaan Pemahaman di Kertas)",
-                "Refleksi 1 Kata Kunci Masing-Masing Siswa",
-                "Umpan Balik Kelas (Whole-Class Feedback)",
-                "Kuis Otomatis 5 Soal"
-            ]
-        )
-
-        submitted = st.form_submit_button("🚀 Buat Rangka Pembelajaran Sekarang", use_container_width=True)
-
-    if submitted:
-        st.success("🎉 Rangka Pembelajaran Berhasil Dibuat!")
-        st.markdown(f"""
-        <div class='card'>
-            <h3>📄 {mapel} - {topik} ({kelas})</h3>
-            <p><b>Alokasi Waktu:</b> {durasi}</p>
-            <hr>
-            <p><b>1. Pembukaan (Apersepsi):</b> {apersepsi}</p>
-            <p><b>2. Kegiatan Inti:</b> {inti}</p>
-            <p><b>3. Penutup & Asesmen:</b> {penutup}</p>
-            <hr>
-            <small><i>Format terstandar 1-halaman siap cetak / disimpan tanpa narasi berbelit-belit.</i></small>
-        </div>
-        """, unsafe_allow_html=True)
-
-        pdf_buffer = BytesIO()
-        pdf = canvas.Canvas(pdf_buffer, pagesize=A4)
-        page_width, page_height = A4
-        cursor_y = page_height - 50
-
-        pdf.setFont("Helvetica-Bold", 16)
-        pdf.drawString(50, cursor_y, "RPP 1-HALAMAN GURUSOBAT")
-        cursor_y -= 30
-        pdf.setFont("Helvetica", 10)
-        pdf_lines = [
-            f"Mata Pelajaran: {mapel}",
-            f"Topik: {topik}",
-            f"Kelas: {kelas}",
-            f"Alokasi Waktu: {durasi}",
-            "",
-            f"1. Pembukaan (Apersepsi): {apersepsi}",
-            f"2. Kegiatan Inti: {inti}",
-            f"3. Penutup & Asesmen: {penutup}",
-        ]
-        for line in pdf_lines:
-            for wrapped_line in textwrap.wrap(line, width=92) or [""]:
-                if cursor_y < 50:
-                    pdf.showPage()
-                    pdf.setFont("Helvetica", 10)
-                    cursor_y = page_height - 50
-                pdf.drawString(50, cursor_y, wrapped_line)
-                cursor_y -= 16
-        pdf.save()
-        pdf_buffer.seek(0)
-
-        st.download_button(
-            label="📥 Unduh RPP 1-Halaman (.pdf)",
-            data=pdf_buffer,
-            file_name=f"RPP_{topik}.pdf",
-            mime="application/pdf"
-        )
-
-# ---------------------------------------------------------
-# FITUR 2: BANK KOMENTAR & RUBRIK
-# ---------------------------------------------------------
-elif menu == "📝 Bank Komentar & Rubrik":
-    st.markdown("<div class='main-header'>📝 Bank Komentar & Rubrik</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-header'>Simpan umpan balik yang sering dipakai dan fokus menilai kriteria paling penting.</div>", unsafe_allow_html=True)
-
-    comment_tab, rubric_tab = st.tabs(["💬 Comment Bank", "✅ Rubrik Satu Kriteria"])
-
-    with comment_tab:
-        with st.form("comment_form"):
-            comment_title = st.text_input("Nama komentar", placeholder="Contoh: Perjelas bukti pendukung")
-            comment_text = st.text_area(
-                "Isi komentar",
-                placeholder="Contoh: Ide utama sudah baik. Tambahkan satu bukti dari materi untuk memperkuat jawaban.",
-            )
-            comment_saved = st.form_submit_button("💾 Simpan Komentar", use_container_width=True)
-
-        if comment_saved and comment_title.strip() and comment_text.strip():
-            st.session_state.comment_bank.append({"title": comment_title.strip(), "text": comment_text.strip()})
-            st.success("Komentar tersimpan di sesi ini.")
-        elif comment_saved:
-            st.warning("Nama dan isi komentar perlu diisi.")
-
-        default_comments = [
-            {"title": "Perjelas jawaban", "text": "Ide utama sudah baik. Tambahkan penjelasan agar jawaban lebih mudah dipahami."},
-            {"title": "Tambahkan bukti", "text": "Sertakan bukti atau contoh dari materi untuk memperkuat jawaban."},
-        ]
-        all_comments = default_comments + st.session_state.comment_bank
-        for comment_index, comment in enumerate(all_comments):
-            with st.container(border=True):
-                st.markdown(f"**{comment['title']}**")
-                st.write(comment["text"])
-                st.code(comment["text"], language=None)
-
-    with rubric_tab:
-        rubric_name = st.text_input("Nama rubrik", value="Rubrik Pemahaman Materi")
-        rubric_criterion = st.text_area(
-            "Kriteria utama",
-            value="Siswa menjelaskan konsep dengan benar dan memberikan contoh yang relevan.",
-        )
-        rubric_levels = st.select_slider(
-            "Jumlah tingkat penilaian", options=[3, 4, 5], value=3
-        )
-        rubric_rows = []
-        for level in range(rubric_levels, 0, -1):
-            rubric_rows.append({
-                "level": level,
-                "description": st.text_input(
-                    f"Deskripsi tingkat {level}",
-                    value="Melebihi harapan" if level == rubric_levels else "Sesuai harapan" if level == 2 else "Perlu bimbingan",
-                    key=f"rubric_level_{level}",
-                ),
-            })
-        rubric_text = "\n".join(
-            [f"{rubric_name}\nKriteria: {rubric_criterion}", ""]
-            + [f"Tingkat {row['level']}: {row['description']}" for row in rubric_rows]
-        )
-        st.download_button(
-            "📥 Unduh Rubrik (.txt)",
-            data=rubric_text,
-            file_name="rubrik_gurusobat.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
-
-# ---------------------------------------------------------
-# FITUR 3: GOTONG ROYONG HUB
+# FITUR 2: GOTONG ROYONG HUB
 # ---------------------------------------------------------
 elif menu == "🤝 Gotong Royong Hub":
     st.markdown("<div class='main-header'>🤝 Gotong Royong Resource Hub</div>", unsafe_allow_html=True)
     st.markdown("<div class='sub-header'>Saling berbagi, menyalin (remix), dan menghemat waktu antar-sesama rekan guru.</div>", unsafe_allow_html=True)
 
-    resource_query = st.text_input(
-        "🔍 Cari rubrik, kuis, atau RPP dari rekan guru lain...",
-        placeholder="Contoh: Rubrik Esai, Kuis IPA Kelas 7...",
-    ).strip().lower()
+    st.text_input("🔍 Cari rubrik, kuis, atau RPP dari rekan guru lain...", placeholder="Contoh: Rubrik Esai, Kuis IPA Kelas 7...")
 
     tab1, tab2 = st.tabs(["🔥 Terpopuler Minggu Ini", "📤 Bagikan Materi Saya"])
 
@@ -373,7 +380,7 @@ elif menu == "🤝 Gotong Royong Hub":
                 "remix": 25
             },
             {
-                "title": "Rangka RPP Praktis Pembelajaran Berbasis Proyek (PJBL)",
+                "title": "Balok RPP Praktis Pembelajaran Berbasis Proyek (PJBL)",
                 "author": "Bu Maya (Guru SD Kelas 5)",
                 "desc": "Rangka 1-halaman proyek daur ulang sampah kelas 5.",
                 "tag": "Rangka RPP",
@@ -381,54 +388,27 @@ elif menu == "🤝 Gotong Royong Hub":
                 "remix": 64
             }
         ]
-        resources.extend(st.session_state.published_resources)
 
         for r in resources:
-            searchable_text = f"{r['title']} {r['author']} {r['desc']} {r['tag']}".lower()
-            if resource_query and resource_query not in searchable_text:
-                continue
             st.markdown(f"""
-            <div class='card'>
-                <span class='tag'>{r['tag']}</span>
+            <div style='background-color:#F8FAFC; border:1px solid #E2E8F0; padding:1.2rem; border-radius:10px; margin-bottom:1rem;'>
+                <span class='badge-type'>{r['tag']}</span>
                 <h4 style='margin-top:0.5rem; margin-bottom:0.2rem;'>{r['title']}</h4>
                 <p style='color:#6B7280; font-size:0.85rem; margin-bottom:0.5rem;'>Oleh: <b>{r['author']}</b></p>
                 <p style='font-size:0.95rem;'>{r['desc']}</p>
                 <p style='font-size:0.85rem; color:#1D4ED8;'>❤️ {r['likes']} Menyukai | 🔄 {r['remix']} Guru Telah Menyalin (Remix)</p>
             </div>
             """, unsafe_allow_html=True)
-            col_a, col_b = st.columns([1, 4])
-            with col_a:
-                if st.button("📥 Remix / Gunakan", key=r['title']):
-                    if r["title"] not in [item["title"] for item in st.session_state.remixed_resources]:
-                        st.session_state.remixed_resources.append(r)
-                    st.success(f"Materi '{r['title']}' berhasil disalin ke koleksi pribadi Anda!")
-
-        if st.session_state.remixed_resources:
-            st.divider()
-            st.subheader("📚 Koleksi Saya")
-            for item in st.session_state.remixed_resources:
-                st.caption(f"{item['tag']} · {item['title']}")
+            if st.button(f"📥 Remix / Gunakan '{r['title']}'", key=r['title']):
+                st.success(f"Materi '{r['title']}' berhasil disalin ke koleksi pribadi Anda!")
 
     with tab2:
         st.subheader("Bagikan Modul Ajar / Rubrik Anda")
         res_title = st.text_input("Judul Materi")
         res_type = st.selectbox("Jenis Materi", ["Rubrik Penilaian", "Kuis Retrieval", "Rangka RPP", "Lembar Kerja"])
         res_desc = st.text_area("Deskripsi Singkat & Ringkasan")
-        res_file = st.file_uploader("Lampiran materi (opsional)", type=["pdf", "docx", "pptx", "xlsx", "txt"])
         if st.button("🚀 Publish ke Gotong Royong Hub"):
-            if not res_title.strip() or not res_desc.strip():
-                st.warning("Judul dan deskripsi materi perlu diisi.")
-            else:
-                st.session_state.published_resources.append({
-                    "title": res_title.strip(),
-                    "author": profile.get("name") or "GuruSobat",
-                    "desc": res_desc.strip(),
-                    "tag": res_type,
-                    "likes": 0,
-                    "remix": 0,
-                    "file_name": res_file.name if res_file else "",
-                })
-                st.success("Materi Anda berhasil dibagikan untuk sesi ini.")
+            st.success("Materi Anda berhasil dibagikan! Terima kasih sudah membantu rekan guru lain.")
 
 # ---------------------------------------------------------
 # FITUR 3: REFLEKSI MIKRO HARIAN
@@ -437,73 +417,18 @@ elif menu == "🌱 Refleksi Mikro Harian":
     st.markdown("<div class='main-header'>🌱 Refleksi Mikro & Ruang Bahagia</div>", unsafe_allow_html=True)
     st.markdown("<div class='sub-header'>Apresiasi diri dan catat keberhasilan kecil Anda hari ini.</div>", unsafe_allow_html=True)
 
-    reflection_tab, affirmation_tab = st.tabs(["🌱 Refleksi Harian", "💌 Apresiasi Sejawat"])
+    st.subheader("Bagaimana perasaan Anda mengajar hari ini?")
+    mood = st.select_slider(
+        "Skala Energi & Mood:",
+        options=["🪫 Sangat Lelah", "🙁 Agak Berat", "😐 Cukup Baik", "🙂 Semangat", "🌟 Sangat Memuaskan"]
+    )
 
-    with reflection_tab:
-        st.subheader("Bagaimana perasaan Anda mengajar hari ini?")
-        mood = st.select_slider(
-            "Skala Energi & Mood:",
-            options=["🪫 Sangat Lelah", "🙁 Agak Berat", "😐 Cukup Baik", "🙂 Semangat", "🌟 Sangat Memuaskan"]
-        )
+    st.subheader("🎉 1 Keberhasilan Kecil Hari Ini (Small Win)")
+    win = st.text_area(
+        "Apa momen positif bersama murid atau rekan guru yang membuat Anda tersenyum hari ini?",
+        placeholder="Contoh: Budi yang biasanya diam hari ini berhasil menjawab kuis dengan percaya diri!"
+    )
 
-        st.subheader("🎉 1 Keberhasilan Kecil Hari Ini (Small Win)")
-        win = st.text_area(
-            "Apa momen positif bersama murid atau rekan guru yang membuat Anda tersenyum hari ini?",
-            placeholder="Contoh: Budi yang biasanya diam hari ini berhasil menjawab kuis dengan percaya diri!"
-        )
-
-        if st.button("💾 Simpan Refleksi Hari Ini", use_container_width=True):
-            if not win.strip():
-                st.warning("Tuliskan satu momen positif sebelum menyimpan refleksi.")
-            else:
-                st.session_state.reflection_history.insert(0, {
-                    "date": datetime.date.today().strftime("%d %B %Y"),
-                    "mood": mood,
-                    "win": win.strip(),
-                })
-                st.balloons()
-                st.success("Refleksi tersimpan untuk sesi ini.")
-
-        history = st.session_state.reflection_history
-        if history:
-            st.subheader("Riwayat Refleksi")
-            mood_scores = {
-                "🪫 Sangat Lelah": 1,
-                "🙁 Agak Berat": 2,
-                "😐 Cukup Baik": 3,
-                "🙂 Semangat": 4,
-                "🌟 Sangat Memuaskan": 5,
-            }
-            average_mood = sum(mood_scores[item["mood"]] for item in history) / len(history)
-            st.metric("Rata-rata mood sesi ini", f"{average_mood:.1f} / 5")
-            for item in history[:5]:
-                with st.container(border=True):
-                    st.caption(f"{item['date']} · {item['mood']}")
-                    st.write(item["win"])
-
-    with affirmation_tab:
-        st.subheader("Kirim apresiasi singkat")
-        with st.form("affirmation_form"):
-            recipient = st.text_input("Untuk rekan guru", placeholder="Contoh: Pak Agus")
-            affirmation = st.text_area(
-                "Pesan apresiasi",
-                placeholder="Terima kasih sudah berbagi ide praktikum hari ini."
-            )
-            affirmation_sent = st.form_submit_button("💌 Kirim Kartu Apresiasi", use_container_width=True)
-
-        if affirmation_sent:
-            if not recipient.strip() or not affirmation.strip():
-                st.warning("Nama rekan dan pesan apresiasi perlu diisi.")
-            else:
-                st.session_state.affirmations.insert(0, {
-                    "sender": profile.get("name") or "GuruSobat",
-                    "recipient": recipient.strip(),
-                    "message": affirmation.strip(),
-                })
-                st.success("Kartu apresiasi tersimpan untuk sesi ini.")
-
-        for item in st.session_state.affirmations[:5]:
-            with st.container(border=True):
-                st.markdown(f"**Untuk {item['recipient']}**")
-                st.write(item["message"])
-                st.caption(f"Dari {item['sender']}")
+    if st.button("💾 Simpan Refleksi Hari Ini"):
+        st.balloons()
+        st.success("Refleksi Anda tersimpan! Ingat, dedikasi Anda sangat berarti bagi masa depan murid-murid Anda.")
